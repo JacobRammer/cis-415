@@ -1,0 +1,8 @@
+.vscode
+*.out
+*.o
+*.txt
+Projects/project1/project1
+*.py
+*.png
+*.tar.gz
