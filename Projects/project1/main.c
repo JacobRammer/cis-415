@@ -55,11 +55,20 @@ int main(int argc, char *argv[])
             displayFile(tokBuffer);
         }
         else if(strcmp(tokBuffer, "mkdir") == 0)
-            {
+        {
                 tokBuffer = strtok_r(NULL, " ", &savePtr);
                 makeDir(tokBuffer);
-            }
-            
+        }  
+        else if (strcmp(tokBuffer, "rm") == 0)
+        {
+            tokBuffer = strtok_r(NULL, " ", &savePtr);  // get rid of "rm"
+            deleteFile(tokBuffer);
+        }
+        else if(strcmp(tokBuffer, "cd") == 0)
+        {
+            tokBuffer = strtok_r(NULL, " ", &savePtr);
+            changeDir(tokBuffer);
+        }                  
         else if(strcmp(tokBuffer, "exit") == 0)
             break;
 

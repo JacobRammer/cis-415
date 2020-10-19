@@ -117,3 +117,56 @@ void makeDir(char *dirName)
 
     mkdir(newName, 0777);  // man page says 0777 is default
 }
+
+void deleteFile(char *filename)
+{
+    int file;
+    int length = strlen(filename);
+    char newFileName[length];
+    memset(newFileName, '\0', sizeof(char) * length);
+    char errorMessage[] = "Error removing file\n";
+    char successMessage[] = "Removed file: ";
+
+    for(int i = 0; i < length; i++)
+    {
+        /*
+        Remove the trailing \n if there is one
+        */
+        if(strcmp(&filename[i], "\n") != 0)
+        {
+            strncat(newFileName, &filename[i], 1);
+        }
+    }
+    if(unlink(newFileName) != 0)
+    {
+        write(1, errorMessage, strlen(errorMessage));
+    }
+    else
+    {
+        write(1, successMessage, strlen(successMessage));
+        write(1, newFileName, strlen(newFileName));
+        write(1, "\n", 1);
+    }  
+}
+
+void changeDir(char* dirName)
+{
+    int length = strlen(dirName);
+    char newDirName[length];
+    memset(newDirName, '\0', sizeof(char) * length);
+
+    for (int i = 0; i < length; i++)
+    {
+        /*
+        Remove the trailing \n if there is one
+        */
+        if (strcmp(&dirName[i], "\n") != 0)
+        {
+            strncat(newDirName, &dirName[i], 1);
+        }
+    }
+    if(chdir(newDirName) == 0)
+    {
+        printf("New directory is: %s\n", newDirName);
+    }
+}
