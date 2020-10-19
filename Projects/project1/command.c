@@ -8,6 +8,13 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
+/*
+I wasn't sure if we were allowed to add auxillary functions. 
+I'm sure we can but opted into not adding them. The for loop
+that removes teh '\n' from strings should have been thrown
+into its own function
+*/
+
 void listDir()
 {
     /* Uses dirent.h and a struct to store file info */
