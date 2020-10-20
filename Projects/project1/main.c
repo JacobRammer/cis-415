@@ -68,7 +68,23 @@ int main(int argc, char *argv[])
         {
             tokBuffer = strtok_r(NULL, " ", &savePtr);
             changeDir(tokBuffer);
-        }                  
+        }
+        else if(strcmp(tokBuffer, "mv") == 0)
+        {
+            char* source = strtok_r(NULL, " ", &savePtr);
+            char *dest = tokBuffer = strtok_r(NULL, " ", &savePtr);
+            // printf("mv token is: %s\n", source);
+            // printf("mv token is: %s\n", dest);
+            moveFile(source, dest);
+        }
+        else if (strcmp(tokBuffer, "cp") == 0)
+        {
+            char *source = strtok_r(NULL, " ", &savePtr);
+            char *dest = tokBuffer = strtok_r(NULL, " ", &savePtr);
+            // printf("mv token is: %s\n", source);
+            // printf("mv token is: %s\n", dest);
+            copyFile(source, dest);
+        }
         else if(strcmp(tokBuffer, "exit") == 0)
             break;
 

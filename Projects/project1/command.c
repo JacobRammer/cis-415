@@ -177,3 +177,92 @@ void changeDir(char* dirName)
         printf("New directory is: %s\n", newDirName);
     }
 }
+
+void moveFile(char *sourcePath, char *destinationPath)
+{
+    int sourceLength = strlen(sourcePath);
+    int destinationLength = strlen(destinationPath);
+    char newSource[sourceLength];
+    char newDestination[destinationLength];
+
+    memset(newSource, '\0', sizeof(char) * sourceLength);
+    memset(newDestination, '\0', sizeof(char) * destinationLength);
+
+    for (int i = 0; i < sourceLength; i++)
+    {
+        /*
+        Remove the trailing \n if there is one
+        */
+        if (strcmp(&sourcePath[i], "\n") != 0)
+        {
+            strncat(newSource, &sourcePath[i], 1);
+        }
+    }
+
+    for (int i = 0; i < destinationLength; i++)
+    {
+        /*
+        Remove the trailing \n if there is one
+        */
+        if (strcmp(&destinationPath[i], "\n") != 0)
+        {
+            strncat(newDestination, &destinationPath[i], 1);
+        }
+    }
+    printf("New source path: %s\n", newSource);
+    printf("New dest path: %s\n", newDestination);
+    if(rename(newSource, newDestination) == 0)
+    {
+        printf("Moved file\n");
+    }
+    else
+    {
+        printf("Move file error\n");
+    }
+    
+}
+
+void copyFile(char *sourcePath, char *destinationPath)
+{
+    int sourceLength = strlen(sourcePath);
+    int destinationLength = strlen(destinationPath);
+    char newSource[sourceLength];
+    char newDestination[destinationLength];
+
+    memset(newSource, '\0', sizeof(char) * sourceLength);
+    memset(newDestination, '\0', sizeof(char) * destinationLength);
+
+    for (int i = 0; i < sourceLength; i++)
+    {
+        /*
+        Remove the trailing \n if there is one
+        */
+        if (strcmp(&sourcePath[i], "\n") != 0)
+        {
+            strncat(newSource, &sourcePath[i], 1);
+        }
+    }
+
+    for (int i = 0; i < destinationLength; i++)
+    {
+        /*
+        Remove the trailing \n if there is one
+        */
+        if (strcmp(&destinationPath[i], "\n") != 0)
+        {
+            strncat(newDestination, &destinationPath[i], 1);
+        }
+    }
+
+    strncat(destinationPath, sourcePath, strlen(sourcePath) + strlen(destinationPath));
+    printf("New destination: %s\n", destinationPath);
+    if(rename(destinationPath, sourcePath) == 1)
+    {
+        printf("copied file\n");
+    }
+    else
+    {
+        printf("Error coping file\n");
+    }
+    
+}
