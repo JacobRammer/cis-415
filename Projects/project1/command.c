@@ -178,7 +178,7 @@ void changeDir(char* dirName)
     }
 }
 
-void moveFile(char *sourcePath, char *destinationPath)
+void moveFile(char *sourcePath, char *destinationPath)  // TODO fix the "." bug here
 {
     int sourceLength = strlen(sourcePath);
     int destinationLength = strlen(destinationPath);
@@ -188,7 +188,13 @@ void moveFile(char *sourcePath, char *destinationPath)
     memset(newSource, '\0', sizeof(char) * sourceLength);
     memset(newDestination, '\0', sizeof(char) * destinationLength);
 
-        for (int i = 0; i < sourceLength; i++)
+    char *cwd = malloc(sizeof(char) * 255);
+    getcwd(cwd, 255);
+
+    if(strcmp(newDestination, ".") == 0)
+        changeDir(cwd);
+
+    for (int i = 0; i < sourceLength; i++)
     {
         /*
         Remove the trailing \n if there is one
@@ -261,27 +267,49 @@ void copyFile(char *sourcePath, char *destinationPath)
     char* cwd = malloc(sizeof(char) * 255);
     getcwd(cwd, 255);
     char* name;
-    
+    char* destName;
     char* next;
 
     /*
     I need to remove the "/" if I'm given a full / absolute path
+    Since cp can also rename files when moving them, this is how i'm 
+    dealing with it. 
     */
-   char* temp = strtok(newSource, "/");
-   while(temp != NULL)
-   {
-       name = temp;
-       temp = strtok(NULL, "/");
-   }
+    if (strcmp(newDestination, ".") != 0)
+    { 
+        /*
+        If the destination is pwd, no need to change file name
+        */
+       
+        char *temp = strtok(newDestination, "/");
+        while (temp != NULL)
+        {
+            name = temp;
+            temp = strtok(NULL, "/");
+        }
+    }else
+    {
+        /*
+        If the destination is not the same name as source, 
+        strip off everything and update the name;
+        */
+        char *temp = strtok(newSource, "/");
+        while (temp != NULL)
+        {
+            name = temp;
+            temp = strtok(NULL, "/");
+        }
+    }
+    
+   printf("Name is: %s\n", name);
+
+
    chdir(finalDest);
    printf("Name is: %s\n", name);
 
    printf("cwd is %s\n", cwd);
    if (strcmp(newDestination, ".") == 0)
        chdir(cwd);
-   // else if(strcmp(newDestination, ".") != 0)
-   //     strcat(finalDest, newDestination);
-   // strcat(finalDest, newSource);
 
    printf("New Dest: %s\n", newDestination);
    printf("Final destination: %s\n", cwd);
@@ -296,21 +324,6 @@ void copyFile(char *sourcePath, char *destinationPath)
        write(dest, buffer, characters);
        characters = read(source, buffer, 255);
     }
-    // while(characters > 0)
-    // {
-    //     write(dest, buffer, characters);
-    // }
-    // printf("New destination: %s\n", finalDest);
-    // if(rename(newSource, finalDest) == 1)
-    // {
-    //     printf("copied file\n");
-    // }
-    // else
-    // {
-    //     printf("Error coping file\n");
-    // }
-
-    // FILE* fName = 
 
     close(dest);
     close(source);
