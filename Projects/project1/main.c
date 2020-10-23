@@ -4,6 +4,21 @@
 #include <string.h>
 #include <stdlib.h>
 
+char *removeCharacter(char *command)
+{
+    int length = strlen(command);
+    char *retVal;
+    retVal = (char *)malloc(sizeof(char) * length);
+    // printf("I get here\n");
+    for (int i = 0; i < length; i++)
+    {
+        if (command[i] != ' ')
+            strncat(retVal, &command[i], 1);
+    }
+    // printf("Command is: %s\n", retVal);
+
+    return retVal;
+}
 
 int main(int argc, char *argv[])
 {
@@ -40,22 +55,34 @@ int main(int argc, char *argv[])
     if(fileMode)
     {
         // output = freopen("output.txt", "w+", stdout);
+        char* line;
         char* argument;
         char* command;
+        char* commandPtr;
         int len = 0;
 ;        while(fgets(lineBuffer, bufferSize, fName) != NULL)
         {
-            printf("Line is: %s", lineBuffer);
+            // printf("Line is: %s", lineBuffer);
         }
         printf("\n");
         // ret = strrchr(lineBuffer, ';');
-        command = strtok_r(lineBuffer, ";", &savePtr);
-        argument = strchr(command, ' ');
-        printf("Command is %s\n", command);
-        printf("Ret is: %s\n", argument);
+        line = strtok_r(lineBuffer, ";", &savePtr);
+        command = strtok_r(line, " ", &commandPtr);
 
-        printf("saveptr is %ld\n", strlen(savePtr));
         
+        printf("Line is: %s\n", line);
+        printf("Command is: %s\n", command);
+        // printf("Argumenmt is: %s\n", argument);
+        printf("SavePtr is %s\n", savePtr);
+        printf("commandPtr is: %s\n", commandPtr);
+        char* temp1;
+        temp1 = strtok_r(commandPtr, " ", &commandPtr);
+        printf("temp1 is:%s\n", temp1);
+        printf("temp1 is:%s\n", temp1);
+        // char *temp2 = strtok_r(commandPtr, " ", &commandPtr);
+        // printf("temp2 is:%s\n", temp2);
+        printf("saveptr is %ld\n", strlen(savePtr));
+        printf("commandPtr is: %s\n", commandPtr);
         len = strlen(argument);
 
         // command = strtok_r(NULL, " ", &savePtr);
