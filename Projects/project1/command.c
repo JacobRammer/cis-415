@@ -20,13 +20,13 @@ void listDir()
     /* Uses dirent.h and a struct to store file info */
 
     DIR* currentDirectory;
-    char cwd[PATH_MAX]; /* Stores the cwd path: /usr/blabla */
+    char cwd[255]; /* Stores the cwd path: /usr/blabla */
     struct dirent *directory; /* Struct that holds file info */
     
 
     if(getcwd(cwd, sizeof(cwd)) != NULL) /*  */
     {
-        printf("Current working directory: %s\n", cwd);
+        // printf("Current working directory: %s\n", cwd);
         currentDirectory = opendir(cwd);
         while((directory = readdir(currentDirectory)) != NULL)
             {
@@ -40,17 +40,17 @@ void listDir()
     }
     
     closedir(currentDirectory);
-    write(1, "\n", 2);
+    write(1, "\n", 1);
     
 }
 
 void showCurrentDir()
 {
-    char cwd[PATH_MAX];
+    char cwd[255];
     if(getcwd(cwd, sizeof(cwd)) != NULL)
     {
         write(1, cwd, strlen(cwd));
-        write(1, "\n", 2);
+        write(1, "\n", 1);
     }
 }
 
@@ -180,51 +180,54 @@ void changeDir(char* dirName)
 
 void moveFile(char *sourcePath, char *destinationPath)  // TODO fix the "." bug here
 {
-    int sourceLength = strlen(sourcePath);
-    int destinationLength = strlen(destinationPath);
-    char newSource[sourceLength];
-    char newDestination[destinationLength];
+    // int sourceLength = strlen(sourcePath);
+    // int destinationLength = strlen(destinationPath);
+    // char newSource[sourceLength];
+    // char newDestination[destinationLength];
 
-    memset(newSource, '\0', sizeof(char) * sourceLength);
-    memset(newDestination, '\0', sizeof(char) * destinationLength);
+    // memset(newSource, '\0', sizeof(char) * sourceLength);
+    // memset(newDestination, '\0', sizeof(char) * destinationLength);
 
-    char *cwd = malloc(sizeof(char) * 255);
-    getcwd(cwd, 255);
+    // char *cwd = malloc(sizeof(char) * 255);
+    // getcwd(cwd, 255);
 
-    if(strcmp(newDestination, ".") == 0)
-        changeDir(cwd);
+    // if(strcmp(newDestination, ".") == 0)
+    //     changeDir(cwd);
 
-    for (int i = 0; i < sourceLength; i++)
-    {
-        /*
-        Remove the trailing \n if there is one
-        */
-        if (strcmp(&sourcePath[i], "\n") != 0)
-        {
-            strncat(newSource, &sourcePath[i], 1);
-        }
-    }
+    // for (int i = 0; i < sourceLength; i++)
+    // {
+    //     /*
+    //     Remove the trailing \n if there is one
+    //     */
+    //     if (strcmp(&sourcePath[i], "\n") != 0)
+    //     {
+    //         strncat(newSource, &sourcePath[i], 1);
+    //     }
+    // }
 
-    for (int i = 0; i < destinationLength; i++)
-    {
-        /*
-        Remove the trailing \n if there is one
-        */
-        if (strcmp(&destinationPath[i], "\n") != 0)
-        {
-            strncat(newDestination, &destinationPath[i], 1);
-        }
-    }
-    printf("New source path: %s\n", newSource);
-    printf("New dest path: %s\n", newDestination);
-    if(rename(newSource, newDestination) == 0)
-    {
-        printf("Moved file\n");
-    }
-    else
-    {
-        printf("Move file error\n");
-    }
+    // for (int i = 0; i < destinationLength; i++)
+    // {
+    //     /*
+    //     Remove the trailing \n if there is one
+    //     */
+    //     if (strcmp(&destinationPath[i], "\n") != 0)
+    //     {
+    //         strncat(newDestination, &destinationPath[i], 1);
+    //     }
+    // }
+    // printf("New source path: %s\n", newSource);
+    // printf("New dest path: %s\n", newDestination);
+    // if(rename(newSource, newDestination) == 0)
+    // {
+    //     printf("Moved file\n");
+    // }
+    // else
+    // {
+    //     printf("Move file error\n");
+    // }
+
+    copyFile(sourcePath, destinationPath);
+    unlink(sourcePath);
     
 }
 
@@ -286,6 +289,7 @@ void copyFile(char *sourcePath, char *destinationPath)
         {
             name = temp;
             temp = strtok(NULL, "/");
+            printf("Yo\n");
         }
     }else
     {
@@ -298,18 +302,19 @@ void copyFile(char *sourcePath, char *destinationPath)
         {
             name = temp;
             temp = strtok(NULL, "/");
+            printf("here\n");
         }
     }
     
-   printf("Name is: %s\n", name);
+//    printf("Name is: %s\n", name);
 
 
    chdir(finalDest);
    printf("Name is: %s\n", name);
 
    printf("cwd is %s\n", cwd);
-   if (strcmp(newDestination, ".") == 0)
-       chdir(cwd);
+//    if (strcmp(newDestination, ".") == 0)
+//        chdir(cwd);
 
    printf("New Dest: %s\n", newDestination);
    printf("Final destination: %s\n", cwd);
