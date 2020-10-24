@@ -183,7 +183,7 @@ void changeDir(char* dirName)
     
 }
 
-void moveFile(char *sourcePath, char *destinationPath)  // TODO fix the "." bug here
+void moveFile(char *sourcePath, char *destinationPath)  
 {
     // int sourceLength = strlen(sourcePath);
     // int destinationLength = strlen(destinationPath);
@@ -334,7 +334,9 @@ void copyFile(char *sourcePath, char *destinationPath)
        write(dest, buffer, characters);
        characters = read(source, buffer, 255);
     }
-
+    
+    free(buffer);
+    free(cwd);
     close(dest);
     close(source);
     

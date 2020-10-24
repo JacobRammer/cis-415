@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
                 {
                     showCurrentDir();
                 }
-                else if(strcmp(command, "mkdir") == 0)
+                else if(strcmp(command, "mkdir") == 0 & strlen(commandPtr) > 0)
                 {
                     tempArgument1 = strtok_r(NULL, " ", &commandPtr);
                     // printf("strlen %ld\n", strlen(commandPtr));
@@ -98,12 +98,12 @@ int main(int argc, char *argv[])
                     // printf("temp argument 1: %s\n", tempArgument1);
                     // printf("commandptr: %s\n", commandPtr);
                 }
-                else if(strcmp(command, "cp") == 0)
+                else if (strcmp(command, "cp") == 0 & strlen(commandPtr) > 0)
                 {
                     // cp needs 2 args
                     tempArgument1 = strtok_r(NULL, " ", &commandPtr);
-                    tempArgument2 = strtok_r(NULL, " ", &commandPtr);
-                    // printf("Commandptr is %s %ld\n", commandPtr, strlen(commandPtr));
+                    if (strlen(commandPtr) > 0)
+                        tempArgument2 = strtok_r(NULL, " ", &commandPtr);
                     if(strlen(commandPtr) == 0)
                         copyFile(tempArgument1, tempArgument2);
                     else
@@ -195,13 +195,18 @@ int main(int argc, char *argv[])
                 }
                 else if (strcmp(command, "mkdir") == 0)
                 {
-                    tempArgument1 = strtok_r(NULL, " ", &commandPtr);
+                    if(strlen(commandPtr) > 0)
+                        {
+                            tempArgument1 = strtok_r(NULL, " ", &commandPtr);
+                            makeDir(tempArgument1);
+                        }
+                        
                     // printf("strlen %ld\n", strlen(commandPtr));
-                    if (strlen(commandPtr) == 0)
-                    {
-                        // printf("hi\n");
-                        makeDir(tempArgument1);
-                    }
+                    // if (strlen(commandPtr) == 0)
+                    // {
+                    //     // printf("hi\n");
+                    //     makeDir(tempArgument1);
+                    // }
                     else
                     {
                         printf("Error! Incorrect syntax. No control code found\n");
