@@ -5,7 +5,7 @@ objects = $(addsuffix .o, $(basename $(sources)))
 
 flags = -g
 
-target = pseudu-shell
+target = a.out
 
 all: $(target) 
 

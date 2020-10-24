@@ -104,7 +104,7 @@ void displayFile(char* fileName)
     
     // free(buffer);
     // free(newFileName);
-    // write(1, "\n", 1);
+    write(1, "\n", 1);
 }
 
 void makeDir(char *dirName)
