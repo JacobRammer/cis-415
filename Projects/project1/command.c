@@ -36,7 +36,9 @@ void listDir()
     }
     else
     {
-        printf("cwd error\n");
+        char* error = "cwd error";
+        write(1, error, strlen(error));
+        write(1, "\n", 1);
     }
     
     closedir(currentDirectory);
@@ -79,7 +81,7 @@ void displayFile(char* fileName)
             strncat(newFileName, &fileName[i], 1);
         }
     }
-    printf("New string %s\n", newFileName);
+    // printf("New string %s\n", newFileName);
     int catFile = open(newFileName, O_RDONLY); // open in read only
 
     if(catFile == -1)
@@ -102,7 +104,7 @@ void displayFile(char* fileName)
     
     // free(buffer);
     // free(newFileName);
-    write(1, "\n", 1);
+    // write(1, "\n", 1);
 }
 
 void makeDir(char *dirName)
@@ -172,10 +174,13 @@ void changeDir(char* dirName)
             strncat(newDirName, &dirName[i], 1);
         }
     }
-    if(chdir(newDirName) == 0)
+    if(chdir(newDirName) != 0)
     {
-        printf("New directory is: %s\n", newDirName);
+        char *message = "Error changing directory";
+        write(1, message, strlen(message));
+        write(1, "\n", 1);
     }
+    
 }
 
 void moveFile(char *sourcePath, char *destinationPath)  // TODO fix the "." bug here
@@ -289,7 +294,7 @@ void copyFile(char *sourcePath, char *destinationPath)
         {
             name = temp;
             temp = strtok(NULL, "/");
-            printf("Yo\n");
+            // printf("Yo\n");
         }
     }else
     {
@@ -302,7 +307,7 @@ void copyFile(char *sourcePath, char *destinationPath)
         {
             name = temp;
             temp = strtok(NULL, "/");
-            printf("here\n");
+            // printf("here\n");
         }
     }
     
@@ -310,14 +315,14 @@ void copyFile(char *sourcePath, char *destinationPath)
 
 
    chdir(finalDest);
-   printf("Name is: %s\n", name);
+//    printf("Name is: %s\n", name);
 
-   printf("cwd is %s\n", cwd);
+//    printf("cwd is %s\n", cwd);
 //    if (strcmp(newDestination, ".") == 0)
 //        chdir(cwd);
 
-   printf("New Dest: %s\n", newDestination);
-   printf("Final destination: %s\n", cwd);
+//    printf("New Dest: %s\n", newDestination);
+//    printf("Final destination: %s\n", cwd);
 
    int dest = open(name, O_CREAT); // create the file
    chmod(name, 0770);
