@@ -38,7 +38,11 @@ int main(int argc, char* argv[])
     //     ret = execvp("./iobound", arguments);
 
    for(int i = 0; i < numChild; i++)
-        wait(0);
+   {
+       if(childPid[i] == 0)
+           wait(0);
+   }
+        
     // printf("Hello world. PID:%d\n", getpid());
 
     return 0;
