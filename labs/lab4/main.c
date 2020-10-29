@@ -22,6 +22,7 @@ void script_print(pid_t *pid_ary, int size)
 int main(int argc, char* argv[])
 {
     int numChild = atoi(argv[1]);
+    printf("Num child is: %d\n", numChild);
     pid_t childPid[numChild];
 
 
@@ -37,11 +38,11 @@ int main(int argc, char* argv[])
     // if(childPid == 0)    
     //     ret = execvp("./iobound", arguments);
 
-   for(int i = 0; i < numChild; i++)
-   {
-       if(childPid[i] == 0)
-           wait(0);
-   }
+    int status;
+    int counter = 0;
+    while(waitpid(childPid[counter], &status, 0) > 0)
+        counter++;
+    
         
     // printf("Hello world. PID:%d\n", getpid());
 
