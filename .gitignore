@@ -13,3 +13,6 @@ submit/lab4/iobound
 labs/lab4/top_script.sh
 labs/lab4/iobound.c
 labs/lab4/top_script.sh
+Projects/project2/cpubound.c
+Projects/project2/iobound.c
+part1
