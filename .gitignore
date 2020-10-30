@@ -6,3 +6,10 @@ Projects/project1/project1
 *.py
 *.png
 *.tar.gz
+labs/lab4/iobound
+labs/lab4/general_top.sh
+labs/lab4/top_script.sh
+submit/lab4/iobound
+labs/lab4/top_script.sh
+labs/lab4/iobound.c
+labs/lab4/top_script.sh
