@@ -21,6 +21,19 @@ int commands(FILE* file)
     return returnVal;
 }
 
+int arguments(char* line)
+{
+    int args = 0;
+    int length = strlen(line);
+    for(int i = 0; i < length; i++)
+    {
+        char temp = line[i];
+        if(line[i] == ' ')
+            args++;
+    }
+    return (args + 1);
+}
+
 int main(int argc, char *argv[])
 {
     FILE* fName;
@@ -35,18 +48,25 @@ int main(int argc, char *argv[])
 
     // Get number of commands
     numCommands = commands(fName);
-    printf("Num commands is: %d\n", numCommands);
+    // printf("Num commands is: %d\n", numCommands);
     // fclose(fName);
     // fName = fopen(argv[1], "r");
 
-    int bufferSize = 256;
+    size_t bufferSize = 256;
     char *lineBuffer;
     lineBuffer = (char *)malloc(bufferSize * sizeof(char));
-    size_t characters;
+    ssize_t characters = 0;
+    fName = fopen(argv[1], "r");
     characters = getline(&lineBuffer, &bufferSize, fName);
     while(characters > 0)
     {
-        printf("%s", lineBuffer);
+        // printf("%s", lineBuffer);
+        int temp = arguments(lineBuffer);
+        printf("Args: %d\n", temp);
+        characters = getline(&lineBuffer, &bufferSize, fName);
     }
+
+    free(lineBuffer);
+    fclose(fName);
     return 0;
 }
