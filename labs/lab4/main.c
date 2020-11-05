@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
         if(childPid[i] == 0)
             {
                 childPid[i] = execvp("./iobound", arguments);
-                exit(0);
+                // exit(0);
             }
         // childPid[i] = execvp("./iobound", arguments);
         

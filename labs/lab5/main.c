@@ -63,6 +63,7 @@ int main()
         }
     }
 
+    sleep(4); // per lab
     script_print(childPid, numChild);
     signaler(childPid, numChild, SIGUSR1);
     signaler(childPid, numChild, SIGSTOP);
@@ -71,6 +72,6 @@ int main()
     sleep(3);
     signaler(childPid, numChild, SIGINT);
 
-    wait(0);
+    wait(0);  //TODO change to waitpid
     return 0;
 }
