@@ -46,7 +46,7 @@ void script_print(pid_t *pid_ary, int size)
 int main()
 {
     int numChild = 5;
-    pid_t childPid[numChild];
+    pid_t childArray[numChild];
     sigset_t signal;  // per IBM docs
     int sigNumber;
     
@@ -62,30 +62,30 @@ int main()
 
     for(int i = 0; i < numChild; i++)
     {
-        childPid[i] = fork();
-        if(childPid[i] == 0)
+        childArray[i] = fork();
+        if(childArray[i] == 0)
         {
             printf("Child process: <%d> - Waiting for SIGUSR1..\n", getpid());
             sigwait(&signal, &sigNumber);
             printf("Child Process: <%d> - Received signal: SIGUSR1 - Calling exec().\n", getpid());
             // exit(0);
             char *arguments[] = {"iobound", "-seconds", "5", NULL};
-            childPid[i] = execvp("./iobound", arguments);        
+            childArray[i] = execvp("./iobound", arguments);        
         }
     }
 
     // sleep(4); // per lab
-    script_print(childPid, numChild);
-    signaler(childPid, numChild, SIGUSR1, 2);
-    signaler(childPid, numChild, SIGSTOP, 3);
+    script_print(childArray, numChild);
+    signaler(childArray, numChild, SIGUSR1, 2);
+    signaler(childArray, numChild, SIGSTOP, 3);
     // sleep(5);
-    signaler(childPid, numChild, SIGCONT, 3);
+    signaler(childArray, numChild, SIGCONT, 3);
     // sleep(3);
-    signaler(childPid, numChild, SIGINT, 3);
+    signaler(childArray, numChild, SIGINT, 3);
 
     int status;
     int counter = 0;
     for(int i = 0; i < numChild; i++)
-        while(waitpid(childPid[i], &status, 0) > 0);
+        while(waitpid(childArray[i], &status, 0) > 0);
     return 0;
 }
