@@ -208,8 +208,8 @@ int main(int argc, char *argv[])
     */
 
     // sleep(5);
-    printf("\nSending children to SIGCONT\n");
-    signaler(childArray, numCommands, SIGCONT, 3);
+    // printf("\nSending children to SIGCONT\n");
+    // signaler(childArray, numCommands, SIGCONT, 3);
     // sleep(3);
     // signaler(childArray, numCommands, SIGINT, 3);
     printf("\n\n!!!!!!Checking to see if any child has exited!!!!!!\n\n");
