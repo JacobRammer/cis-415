@@ -6,6 +6,14 @@
 #include <string.h>
 #include <signal.h>
 
+
+FILE *fName;
+int numCommands;  // how many commands ie # of lines in file
+int child = 0;
+pid_t* childArray;
+int terminated = 0;
+int inc = 0;
+
 int commands(FILE *file)
 {
     /*
@@ -63,7 +71,7 @@ int arguments(char *line)
     return (args + 1);
 }
 
-void signaler(pid_t *pool, int numChildren, int signal, int wait)
+void signaler(int numChildren, int signal, int wait)
 {
     sleep(wait);
     // printf("Num children: %d\n", numChildren);
@@ -71,8 +79,8 @@ void signaler(pid_t *pool, int numChildren, int signal, int wait)
     {
         printf("Parent process: <%d> - Sending signal: <%d> to child"
                "process: <%d>\n",
-               getpid(), signal, pool[i]);
-        kill(pool[i], signal);
+               getpid(), signal, childArray[i]);
+        kill(childArray[i], signal);
     }
 }
 
@@ -106,20 +114,64 @@ int childRunning(pid_t* pool, int numChildren)
    {
         if(waitpid(pool[i], &status, WNOHANG) == 0)
             return 0;  // not done
-        return 1;  // all done
    }
+   return 1; // all done
 }
 
 void alarmSignal()
 {
+    /*
+    Executes processes in the order they were forked.
+    Loops through everything at least once. Will not
+    execute finished processes and they will be skipped
+    */
+
     printf("Alarm signal\n");
+    // int currentChild = child % numCommands;
+    int checked = 0;
+    int status;
+    // printf("Current child: %d\n", currentChild);
+    // if(!childRunning(&childArray[currentChild], numCommands))
+    // {
+    //         printf("Sending signal <%d> to process <%d>. Executing for 1 second\n", 
+    //             SIGSTOP, childArray[currentChild]);
+    //         kill(childArray[currentChild], SIGCONT);
+    //         sleep(1);
+    //         kill(childArray[currentChild], SIGSTOP);
+    //         printf("1 Second elapsed. Sending <%d> to <%d>\n", 
+    //             childArray[currentChild], SIGCONT);
+    // }
+    // child++;
+
+    if(!childRunning(childArray, numCommands))
+    {
+        // printf("Here\n");
+        kill(childArray[child], SIGSTOP);
+        child = (child + 1) % numCommands;
+        while(waitpid(childArray[child], &status, WNOHANG) != 0)
+        {
+            checked++;
+            child = (child + 1) % numCommands;
+            if(checked > numCommands)
+            {
+                break;
+            }
+        }
+        if (checked <= numCommands)
+            kill(childArray[child], SIGCONT);
+        alarm(1);
+    }else
+    {
+        printf("All children are finished");
+    }
+    printf("Sending <%d>\n", childArray[child]);
+
+    // alarm(1);
+    // signal(SIGALRM, alarmSignal);
 }
 
 int main(int argc, char *argv[])
-{
-
-    FILE *fName;
-    int numCommands; // how many commands ie # of lines in file
+{   
 
     fName = fopen(argv[1], "r");
     if (fName == NULL)
@@ -130,6 +182,7 @@ int main(int argc, char *argv[])
 
     // Get number of commands
     numCommands = commands(fName);
+    childArray = malloc(sizeof(pid_t) * numCommands);
 
     size_t bufferSize = 256;
     char *lineBuffer; // hold line with newline
@@ -139,7 +192,7 @@ int main(int argc, char *argv[])
     fName = fopen(argv[1], "r");
     characters = getline(&lineBuffer, &bufferSize, fName);
     removeNewline(lineBuffer);
-    pid_t childArray[numCommands];
+    // pid_t childArray[numCommands];
     char *savePtr;
     int currentChild = 0; // Saves which command we're on
 
@@ -197,10 +250,10 @@ int main(int argc, char *argv[])
     }
     script_print(childArray, numCommands);
     printf("\nSending children to SIGURS1\n");
-    signaler(childArray, numCommands, SIGUSR1, 0);
+    signaler(numCommands, SIGUSR1, 0);
 
     printf("\nCalling exec and sending children to SIGSTOP\n");
-    signaler(childArray, numCommands, SIGSTOP, 0);
+    signaler( numCommands, SIGSTOP, 0);
 
     /*
     Here is where we need to loog through all the processes
@@ -212,9 +265,10 @@ int main(int argc, char *argv[])
     // signaler(childArray, numCommands, SIGCONT, 3);
     // sleep(3);
     // signaler(childArray, numCommands, SIGINT, 3);
-    printf("\n\n!!!!!!Checking to see if any child has exited!!!!!!\n\n");
+    // printf("\n\n!!!!!!Checking to see if any child has exited!!!!!!\n\n");
+    // system("clear");
     signal(SIGALRM, alarmSignal);
-    alarm(5);
+    alarm(1);
 
     int status;
     for (int i = 0; i < numCommands; i++)
