@@ -134,6 +134,8 @@ void topPrint(pid_t pool, int currentChild)
     char* pid;
     char* vmSize;  // virtual memory
     char* savePtr;
+    char *line;
+    line = (char*)malloc(sizeof(char) * bufferSize);
 
     if(currentChild == 0)  // first fork in series
     {
@@ -143,7 +145,7 @@ void topPrint(pid_t pool, int currentChild)
 
     if(procFile != NULL)
     {
-        char *line;
+        
         for (int i = 0; i < 55; i++)
         {
             
@@ -193,6 +195,7 @@ void topPrint(pid_t pool, int currentChild)
     // }
     if(procFile != NULL)
         fclose(procFile);
+    free(line);
     // sleep(500);
 }
 
