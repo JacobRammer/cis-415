@@ -113,9 +113,9 @@ int childRunning(pid_t* pool, int numChildren)
    for(int i = 0; i < numChildren; i++)
    {
         if(waitpid(pool[i], &status, WNOHANG) == 0)
-            return 0;  // not done
+            return 1;  // not done
    }
-   return 1; // all done
+   return 0; // all done
 }
 
 void alarmSignal()
@@ -126,9 +126,9 @@ void alarmSignal()
     execute finished processes and they will be skipped
     */
 
-    printf("Alarm signal\n");
+    printf("\nAlarm sounded! Switching process execution\n");
     // int currentChild = child % numCommands;
-    int checked = 0;
+    int totalProcesses = 0;
     int status;
     // printf("Current child: %d\n", currentChild);
     // if(!childRunning(&childArray[currentChild], numCommands))
@@ -142,29 +142,35 @@ void alarmSignal()
     //             childArray[currentChild], SIGCONT);
     // }
     // child++;
+    // alarm(1);
 
-    if(!childRunning(childArray, numCommands))
+    if(childRunning(childArray, numCommands))
     {
-        // printf("Here\n");
         kill(childArray[child], SIGSTOP);
         child = (child + 1) % numCommands;
         while(waitpid(childArray[child], &status, WNOHANG) != 0)
         {
-            checked++;
+            totalProcesses++;
             child = (child + 1) % numCommands;
-            if(checked > numCommands)
+            if(totalProcesses > numCommands)
             {
+                /*
+                Don't think I need this anymore. Think I fixed the 
+                execvp error in main not killing invalid
+                processes
+                */
+                printf("Invalid command was previously provided to execvp()."
+                     "All processes done executing");
                 break;
             }
+                
         }
-        if (checked <= numCommands)
+        if (totalProcesses <= numCommands)
             kill(childArray[child], SIGCONT);
+        // alarm(10);  // Uncomment this for easier debugging
         alarm(1);
-    }else
-    {
-        printf("All children are finished");
     }
-    printf("Sending <%d>\n", childArray[child]);
+    printf("Running child: <%d> for 1 second\n", childArray[child]);
 
     // alarm(1);
     // signal(SIGALRM, alarmSignal);
@@ -248,7 +254,10 @@ int main(int argc, char *argv[])
         removeNewline(lineBuffer);
         currentChild++;
     }
+    printf("Sleeping for 1 second to wait for all forks.\n");
+    
     script_print(childArray, numCommands);
+    sleep(1);
     printf("\nSending children to SIGURS1\n");
     signaler(numCommands, SIGUSR1, 0);
 
@@ -259,6 +268,12 @@ int main(int argc, char *argv[])
     Here is where we need to loog through all the processes
     until they're done for 1 second each
     */
+    signal(SIGALRM, alarmSignal);
+    alarm(1);
+
+    /*
+    End part 3
+    */
 
     // sleep(5);
     // printf("\nSending children to SIGCONT\n");
@@ -267,8 +282,7 @@ int main(int argc, char *argv[])
     // signaler(childArray, numCommands, SIGINT, 3);
     // printf("\n\n!!!!!!Checking to see if any child has exited!!!!!!\n\n");
     // system("clear");
-    signal(SIGALRM, alarmSignal);
-    alarm(1);
+    
 
     int status;
     for (int i = 0; i < numCommands; i++)
@@ -276,6 +290,6 @@ int main(int argc, char *argv[])
             ;
     free(lineBuffer);
     fclose(fName);
-    printf("\nAll processes are done executing.\n");
+    // printf("\nAll processes are done executing.\n");
     return 0;
 }
