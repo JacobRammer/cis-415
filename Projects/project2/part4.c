@@ -118,6 +118,83 @@ int childRunning(pid_t* pool, int numChildren)
    return 0; // all done
 }
 
+void topPrint(pid_t pool, int currentChild)
+{
+    // printf("TEST2: %d\n", pool);
+    char fName[256];
+    sprintf(fName, "/proc/%d/status", pool);
+    // printf("Fname is: %s\n", fName);
+    char* info[55];
+    FILE* procFile;
+    procFile = fopen(fName, "r");
+    size_t bufferSize = 256;
+    char* name;  // name of process    
+    char* state;  // state of process
+    char* pPid;  // parent ID
+    char* pid;
+    char* vmSize;  // virtual memory
+    char* savePtr;
+
+    if(currentChild == 0)  // first fork in series
+    {
+        printf("\n\t\t\t============== Process Explorer ==============\n");
+        printf("\tProcess Name\t\tProcess State\t\tPid\t\tPPid\t\tVMSize\n");
+    }
+
+    if(procFile != NULL)
+    {
+        char *line;
+        for (int i = 0; i < 55; i++)
+        {
+            
+            getline(&line, &bufferSize, procFile);
+            strtok_r(line, ": ", &savePtr);
+            removeNewline(savePtr);
+            // printf("Savepts: %s\n", savePtr);
+            if(i == 0)  // name
+                printf("%s", savePtr);
+            else if(i == 2)  // state
+                printf("\t\t%s", savePtr);
+            else if(i == 5)  // Pid
+                printf("\t\t%d", pool);
+            else if(i == 6)  // PPid
+                printf("\t%s", savePtr);
+            else if(i == 17)
+                printf("\t%s", savePtr);
+            // sleep(5);
+        }
+        
+        // printf("%s", name);
+        // printf("%s\n", info[2]);
+        printf("\n");
+    }
+    
+    /*
+    /proc/status important information: 55 lines long
+    line 1 = name
+    line 3 = state
+    */
+    
+    // sleep(20);
+    // FILE *status;
+    // status = fopen(fName, "r");
+    // char *info[55];
+    // size_t bufferSize = 256;
+    // if (status == NULL)
+    // {
+    //     printf("No valid file!\n");
+    //     exit(EXIT_FAILURE);
+    // }
+    // for (int i = 0; i < 55; i++)
+    // {
+    //     getline(&info[i], &bufferSize, status);
+    //     printf("!!! %s\n", info[i]);
+    //     exit(0);
+    // }
+    if(procFile != NULL)
+        fclose(procFile);
+    // sleep(500);
+}
 
 void alarmSignal()
 {
@@ -149,6 +226,7 @@ void alarmSignal()
     {
         kill(childArray[child], SIGSTOP);
         child = (child + 1) % numCommands;
+        
         while(waitpid(childArray[child], &status, WNOHANG) != 0)
         {
             totalProcesses++;
@@ -170,6 +248,12 @@ void alarmSignal()
             kill(childArray[child], SIGCONT);
         // alarm(10);  // Uncomment this for easier debugging
         alarm(1);
+        for(int i = 0; i < numCommands; i++)
+            {
+                // printf("Test: %d\n", childArray[i]);
+                topPrint(childArray[i], i);
+            }
+                
     }
     printf("Running child: <%d> for 1 second\n", childArray[child]);
 
@@ -241,11 +325,13 @@ int main(int argc, char *argv[])
         {
             printf("Child process: <%d> - Waiting for SIGUSR1..\n", getpid());
             sigwait(&signalSet, &sigNumber);
-            printf("Child Process: <%d> - Received signal: SIGUSR1 - Calling exec().\n", getpid());
+            // printf("Child Process: <%d> - Received signal: SIGUSR1 - Calling exec().\n", getpid());
             if(childArray[currentChild] = execvp(argumentArray[0], argumentArray) < 0);
             {
                 perror("Execvp error: ");
-                exit(0);
+                free(lineBuffer);
+                free(childArray);
+                exit(-1);
             }
             // exit(0);
         }
@@ -264,6 +350,7 @@ int main(int argc, char *argv[])
 
     printf("\nCalling exec and sending children to SIGSTOP\n");
     signaler( numCommands, SIGSTOP, 0);
+    sleep(1);
 
     /*
     Here is where we need to loog through all the processes
@@ -290,7 +377,9 @@ int main(int argc, char *argv[])
         while (waitpid(childArray[i], &status, 0) > 0)
             ;
     free(lineBuffer);
-    fclose(fName);
+    free(childArray);
+    if(fName != NULL)
+        fclose(fName);
     // printf("\nAll processes are done executing.\n");
     return 0;
 }

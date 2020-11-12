@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include "header.h"
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
