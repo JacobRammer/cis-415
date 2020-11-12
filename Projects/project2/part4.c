@@ -383,6 +383,6 @@ int main(int argc, char *argv[])
     free(childArray);
     if(fName != NULL)
         fclose(fName);
-    // printf("\nAll processes are done executing.\n");
+    printf("\nAll processes are done executing.\n");
     return 0;
 }
