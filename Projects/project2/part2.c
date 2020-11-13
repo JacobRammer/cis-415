@@ -165,7 +165,10 @@ int main(int argc, char *argv[])
             if(childArray[currentChild] = execvp(argumentArray[0], argumentArray) < 0);
             {
                 perror("Execvp error: ");
-                exit(0);
+                free(lineBuffer);
+                // free(childArray);
+                fclose(fName);
+                exit(-1);
             }
             // exit(0);
         }
@@ -175,6 +178,7 @@ int main(int argc, char *argv[])
         removeNewline(lineBuffer);
         currentChild++;
     }
+    sleep(1);
     script_print(childArray, numCommands);
     printf("\nSending children to SIGURS1\n");
     signaler(childArray, numCommands, SIGUSR1, 2);
@@ -196,5 +200,5 @@ int main(int argc, char *argv[])
     free(lineBuffer);
     fclose(fName);
     printf("\nAll processes are done executing.\n");
-    return 0;
+    exit(0);
 }

@@ -113,8 +113,13 @@ int main(int argc, char *argv[])
         if(childArray[currentChild] == 0)
         {
             if(childArray[currentChild] = execvp(argumentArray[0], argumentArray) < 0);
-                printf("Invalid command\n");
-            exit(0);
+                {
+                    perror("Execvp error: ");
+                    free(lineBuffer);
+                    // free(childArray);
+                    fclose(fName);
+                    exit(-1);
+                }
         }
 
         // Move onto the next command (line in file)
@@ -128,5 +133,5 @@ int main(int argc, char *argv[])
         while(waitpid(childArray[i], &status, 0) > 0);
     free(lineBuffer);
     fclose(fName);
-    return 0;
+    exit(0);
 }

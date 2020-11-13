@@ -245,7 +245,10 @@ int main(int argc, char *argv[])
             if(childArray[currentChild] = execvp(argumentArray[0], argumentArray) < 0);
             {
                 perror("Execvp error: ");
-                exit(0);
+                free(lineBuffer);
+                free(childArray);
+                fclose(fName);
+                exit(-1);
             }
             // exit(0);
         }
@@ -290,7 +293,8 @@ int main(int argc, char *argv[])
         while (waitpid(childArray[i], &status, 0) > 0)
             ;
     free(lineBuffer);
+    free(childArray);
     fclose(fName);
-    // printf("\nAll processes are done executing.\n");
-    return 0;
+    printf("\nAll processes are done executing.\n");
+    exit(0);
 }

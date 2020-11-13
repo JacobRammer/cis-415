@@ -39,6 +39,7 @@ int commands(FILE *file)
 
 void removeNewline(char *input)
 {
+    
     int length = strlen(input);
     // printf("Input is %s\n", input);
     for (int i = 0; i < length; i++)
@@ -136,6 +137,7 @@ void topPrint(pid_t pool, int currentChild)
     char* savePtr;
     char *line;
     line = (char*)malloc(sizeof(char) * bufferSize);
+    char* temp;
 
     if(currentChild == 0)  // first fork in series
     {
@@ -143,11 +145,12 @@ void topPrint(pid_t pool, int currentChild)
         printf("\tProcess Name\t\tProcess State\t\tPid\t\tPPid\t\tVMSize\n");
     }
 
-    if(procFile != NULL)
+    if(procFile != NULL)  // if a process terminates, file goes away
     {
         
         for (int i = 0; i < 55; i++)
         {
+            temp = (char*)malloc(sizeof(char) * bufferSize);
             
             getline(&line, &bufferSize, procFile);
             strtok_r(line, ": ", &savePtr);
@@ -164,6 +167,7 @@ void topPrint(pid_t pool, int currentChild)
             else if(i == 17)
                 printf("\t%s", savePtr);
             // sleep(5);
+            free(temp);
         }
         
         // printf("%s", name);
@@ -177,22 +181,6 @@ void topPrint(pid_t pool, int currentChild)
     line 3 = state
     */
     
-    // sleep(20);
-    // FILE *status;
-    // status = fopen(fName, "r");
-    // char *info[55];
-    // size_t bufferSize = 256;
-    // if (status == NULL)
-    // {
-    //     printf("No valid file!\n");
-    //     exit(EXIT_FAILURE);
-    // }
-    // for (int i = 0; i < 55; i++)
-    // {
-    //     getline(&info[i], &bufferSize, status);
-    //     printf("!!! %s\n", info[i]);
-    //     exit(0);
-    // }
     if(procFile != NULL)
         fclose(procFile);
     free(line);
