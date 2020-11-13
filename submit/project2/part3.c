@@ -39,7 +39,6 @@ int commands(FILE *file)
 
 void removeNewline(char *input)
 {
-    
     int length = strlen(input);
     // printf("Input is %s\n", input);
     for (int i = 0; i < length; i++)
@@ -119,73 +118,6 @@ int childRunning(pid_t* pool, int numChildren)
    return 0; // all done
 }
 
-void topPrint(pid_t pool, int currentChild)
-{
-    // printf("TEST2: %d\n", pool);
-    char fName[256];
-    sprintf(fName, "/proc/%d/status", pool);
-    // printf("Fname is: %s\n", fName);
-    char* info[55];
-    FILE* procFile;
-    procFile = fopen(fName, "r");
-    size_t bufferSize = 256;
-    char* name;  // name of process    
-    char* state;  // state of process
-    char* pPid;  // parent ID
-    char* pid;
-    char* vmSize;  // virtual memory
-    char* savePtr;
-    char *line;
-    line = (char*)malloc(sizeof(char) * bufferSize);
-    char* temp;
-
-    if(currentChild == 0)  // first fork in series
-    {
-        printf("\n\t\t\t============== Process Explorer ==============\n");
-        printf("\tProcess Name\t\tProcess State\t\tPid\t\tPPid\t\tVMSize\n");
-    }
-
-    if(procFile != NULL)  // if a process terminates, file goes away
-    {
-        
-        for (int i = 0; i < 55; i++)
-        {
-            temp = (char*)malloc(sizeof(char) * bufferSize);
-            
-            getline(&line, &bufferSize, procFile);
-            strtok_r(line, ": ", &savePtr);
-            removeNewline(savePtr);
-            // printf("Savepts: %s\n", savePtr);
-            if(i == 0)  // name
-                printf("%s", savePtr);
-            else if(i == 2)  // state
-                printf("\t\t%s", savePtr);
-            else if(i == 5)  // Pid
-                printf("\t\t%d", pool);
-            else if(i == 6)  // PPid
-                printf("\t%s", savePtr);
-            else if(i == 17)
-                printf("\t%s", savePtr);
-            // sleep(5);
-            free(temp);
-        }
-        
-        // printf("%s", name);
-        // printf("%s\n", info[2]);
-        printf("\n");
-    }
-    
-    /*
-    /proc/status important information: 55 lines long
-    line 1 = name
-    line 3 = state
-    */
-    
-    if(procFile != NULL)
-        fclose(procFile);
-    free(line);
-    // sleep(500);
-}
 
 void alarmSignal()
 {
@@ -217,7 +149,6 @@ void alarmSignal()
     {
         kill(childArray[child], SIGSTOP);
         child = (child + 1) % numCommands;
-        
         while(waitpid(childArray[child], &status, WNOHANG) != 0)
         {
             totalProcesses++;
@@ -239,12 +170,6 @@ void alarmSignal()
             kill(childArray[child], SIGCONT);
         // alarm(10);  // Uncomment this for easier debugging
         alarm(1);
-        for(int i = 0; i < numCommands; i++)
-            {
-                // printf("Test: %d\n", childArray[i]);
-                topPrint(childArray[i], i);
-            }
-                
     }
     printf("Running child: <%d> for 1 second\n", childArray[child]);
 
@@ -316,7 +241,7 @@ int main(int argc, char *argv[])
         {
             printf("Child process: <%d> - Waiting for SIGUSR1..\n", getpid());
             sigwait(&signalSet, &sigNumber);
-            // printf("Child Process: <%d> - Received signal: SIGUSR1 - Calling exec().\n", getpid());
+            printf("Child Process: <%d> - Received signal: SIGUSR1 - Calling exec().\n", getpid());
             if(childArray[currentChild] = execvp(argumentArray[0], argumentArray) < 0);
             {
                 perror("Execvp error: ");
@@ -342,7 +267,6 @@ int main(int argc, char *argv[])
 
     printf("\nCalling exec and sending children to SIGSTOP\n");
     signaler( numCommands, SIGSTOP, 0);
-    sleep(1);
 
     /*
     Here is where we need to loog through all the processes
@@ -370,8 +294,7 @@ int main(int argc, char *argv[])
             ;
     free(lineBuffer);
     free(childArray);
-    if(fName != NULL)
-        fclose(fName);
+    fclose(fName);
     printf("\nAll processes are done executing.\n");
-    return 0;
+    exit(0);
 }
