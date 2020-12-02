@@ -353,7 +353,7 @@ int main(int argc, char argv[]) {
     for(int i = 0; i < MAXQUEUES; i++)
         freeMTQ(i);
 
-    sleep(2);
+    // sleep(2);
     return EXIT_SUCCESS;
     
 }
