@@ -56,13 +56,13 @@ int main()
     sleep(5);
 
     pthread_mutex_lock(&mutex);
-    pthread_cond_broadcast(&condition);
+    // pthread_cond_broadcast(&condition);
     pthread_mutex_unlock(&mutex);
 
     for(int i = 0; i < MAXPROX; i++)
     {
         // wait for threads to quit
-        pthread_join(testThread[i], NULL);
+        // pthread_join(testThread[i], NULL);
     }
 
     printf("\n\nend numBuf is: %d\n", numBuf);

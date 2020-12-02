@@ -226,6 +226,7 @@ int main()
         dequeue("Bar", popTicketTwo);
     }
     printf("\nPopping from empty queue\n\n");
+    enqueue("Breakfast", &breakfastTicket);
     dequeue("Breakfast", popTicketOne);
     dequeue("Lunch", popTicketTwo);
     dequeue("Dinner", popTicketThree);
