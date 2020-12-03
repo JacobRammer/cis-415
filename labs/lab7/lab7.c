@@ -252,13 +252,21 @@ void *subscriber(void *args) {
 
     mealTicket temp = ((subStruct*) args)->MT;
     char* name = ((subStruct*) args)->name;
-    if (dequeue(name, &temp))
+    int dq = 1; // run first time reguardless
+    while(dq)
     {
-        printf("Subscriber: queue: %s, popped dish %s. Thread %ld\n", name, temp.dish, pthread_self());
-    }else
-    {
-        printf("Subscriber: Queue %s is empty. Thread: %ld\n", name, pthread_self());
-        sleep(1);
+        dq = dequeue(name, &temp);
+        if(dq == 1)
+        {
+            printf("Subscriber: queue: %s, popped dish %s. Thread %ld\n", name, temp.dish, pthread_self());
+        }
+        else
+        {
+            printf("Subscriber: Queue %s is empty. Thread: %ld\n", name, pthread_self());
+            sleep(1);
+            dq = dequeue(name, &temp);
+        }
+        
     }
 
     // dequeue(name, &temp);
@@ -334,6 +342,7 @@ int main(int argc, char argv[]) {
         globalSubs[i].MT = temp;
         pthread_create(&subPthread[i], NULL, subscriber, &globalSubs[i]);
     }
+    sleep(1);
     // pthread_create(&subPthread[0], NULL, subscriber, &globalSubs[0]);
     printf("Starting threads in 1 second.\n");
     sleep(1);
