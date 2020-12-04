@@ -4,11 +4,12 @@
 #include <string.h>
 #include <pthread.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 //=============================================================================
 
 //================================= Constants =================================
 #define MAXNAME 15
-#define MAXQUEUES 4
+#define MAXQUEUES 2
 #define MAXTICKETS 3
 #define MAXDISH 20
 #define MAXPUBs 3
@@ -20,10 +21,13 @@
 pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
 
+int delta = 1;
+
 typedef struct
 {
     int entryNum;
-    struct timeval timeStamp;
+    struct timeval startTime;  // when the object was created
+    struct timeval cleanTime;  // when the object is being looked at by cleanup
     int pubID;
     char photoURl[MAXURL];
     char photoCaption[MAXCAPTION];
@@ -59,10 +63,19 @@ typedef struct
 
 Queue* registry[MAXQUEUES];  // stores all out q's
 
+
 void initTopic(Topic* t, int id)
 {
     t->entryNum = 0;
     t->pubID =  id;
+    // clock_gettime(CLOCK_REALTIME, &t->timeStamp);
+    gettimeofday(&t->startTime, NULL);
+}
+
+void initRegistry()
+{
+    for (int i = 0; i < MAXQUEUES; i++)
+        registry[i]->topicID = -1;
 }
 
 void initQueue(Queue* q, char* qName, int topicType)
@@ -89,7 +102,7 @@ int isEmpty(Queue* q)
     return q->length == 0;
 }
 
-int findQueue(Topic* t, int topicType)
+int findQueue(int topicType)
 {
     int regIndex = -1;
     for (int i = 0; i < MAXQUEUES; i++)
@@ -100,12 +113,14 @@ int findQueue(Topic* t, int topicType)
             break;
         }
     }
+
+    return regIndex;
 }
 
 int enqueue(int topicType, Topic* t)
 {
     int regIndex;
-    regIndex = findQueue(t, topicType);
+    regIndex = findQueue(topicType);
     // printf("Test: %d\n", regIndex);
     if(regIndex == -1)  // Queue not found
     {
@@ -137,7 +152,7 @@ int enqueue(int topicType, Topic* t)
 int dequeue(int topicID, Topic* t)
 {
     int regIndex;
-    regIndex = findQueue(t, topicID);
+    regIndex = findQueue(topicID);
     if(regIndex == -1)
     {
         printf("From dequeue: queue type not found\n");
@@ -175,24 +190,100 @@ int getEntry(int lastEntry, int topicType, Topic* t)
     entry. Last read entry is pulled from a dequeued topic
     and is the entryNum for that topic. 
     */
-
-    pthread_mutex_lock(&registry[topicType]->mutex);
+    int location = findQueue(topicType);
+    int max = registry[location]->max;
+    int itter = registry[location]->max;
+    printf("Location %d\n", location);
+    pthread_mutex_lock(&registry[location]->mutex);
 
     // Case 1
-    if(isEmpty(registry[topicType]))
+    if(isEmpty(registry[location]))
         return 0;
 
     // Case 2
-    int itter = registry[topicType]->max;
+    // printf("Max: %d\n\n", itter);    
     for(int i = 0; i < itter; i++)
     {
-        if(registry[topicType]->buffer[registry[itter]])
+        // printf("From entry: last read %d\n", registry[location]->lastRead);
+        // printf("From entry: looking for tickerNum (lastread + 1): %d\n", lastEntry + 1);
+        // printf("Test 3: %d\n", registry[location]->buffer[i].entryNum);
+        int test3 = registry[location]->buffer[i].entryNum;
+        int test4 = lastEntry + 1;
+        if(registry[location]->buffer[i].entryNum == lastEntry + 1) 
+            {
+                printf("Case 2\n");
+                memcpy(t, &registry[location]->buffer[i], sizeof(Topic));
+                pthread_mutex_unlock(&registry[location]->mutex);
+                return 1;
+            }
+            // printf("\n\n");
+    }
+
+
+    // Case 3a
+    int ltFlag = 0;
+    for (int i = 0; i < itter; i++)
+    {
+        int test = registry[location]->buffer[i].entryNum;
+        int test2 = lastEntry + 1;
+        if (registry[location]->buffer[i].entryNum <= lastEntry + 1)
+        {
+            ltFlag++;
+            if(ltFlag == max)
+            {
+                printf("Case 3a\n");
+                memcpy(t, &registry[location]->buffer[i], sizeof(Topic));
+                pthread_mutex_unlock(&registry[location]->mutex);
+                return 0;
+            }
+        }
+    }
+
+    // case 3b
+    registry[location]->buffer[registry[location]->head].entryNum = 100;
+    if(registry[location]->buffer[registry[location]->head].entryNum > lastEntry + 1)
+    {
+        printf("Case 3b\n");
+        memcpy(t, &registry[location]->buffer[location], sizeof(Topic));
+    }
+
+    pthread_mutex_unlock(&registry[location]->mutex);
+    return 0;
+}
+
+void cleanUp()
+{
+    for(int i = 0; i < MAXQUEUES; i++)
+    {
+        Topic *t1;
+        t1 = malloc(sizeof(Topic));
+
+        int found = findQueue(registry[i]->topicID);
+        printf("found: %d\n", found);
+        if(found != -1)
+        { 
+            int head = registry[i]->head;
+            int tail = registry[i]->tail;
+            for(int j = tail; j != head; j++)
+            {
+                char* name = registry[found]->buffer[j].photoCaption;
+                sleep(5);
+                gettimeofday(&registry[found]->buffer[j].cleanTime, NULL);
+                long test = registry[found]->buffer[j].cleanTime.tv_sec - registry[found]->buffer[j].startTime.tv_sec;
+                printf("Tail: %d, head: %d\n", tail, head);
+                printf("Cleanup: %s\n", registry[found]->buffer[j].photoCaption);
+                printf("Time test: %ld\n", test);
+                if(test > delta)
+                    dequeue(registry[found]->topicID, t1);
+            }
+        }
+        free(t1);      
     }
 }
 
 void testQueue()
 {
-    printf("*** Testing queue data structure ***");
+    printf("*** Testing queue data structure ***\n");
     Queue *q;
     q = malloc(sizeof(Queue));
     initQueue(q, "Test Queue", 1);
@@ -228,6 +319,7 @@ void testQueue()
     {
         printf("From main testing enqueue: publisher <%d> caption %s\n",
                registry[0]->buffer[i].pubID, registry[0]->buffer[i].photoCaption);
+        // printf("Test entryNum: %d\n", registry[0]->buffer[i].entryNum);
     }
 
     // Topic *t4;
@@ -275,25 +367,83 @@ void testEntry()
     // printf("Registry 0 <%s>\n", registry[0]->name);
     // printf("Testing: %d\n", registry[0]->topicID);
 
-    t1->entryNum = 100;
-    t2->entryNum = 200;
-    t3->entryNum = 300;
+    // t1->entryNum = 100;
+    // t2->entryNum = 200;
+    // t3->entryNum = 300;
     enqueue(1, t1);
     enqueue(1, t2);
     enqueue(1, t3);
     enqueue(1, t1);
     Topic *t4;
     t4 = malloc(sizeof(Topic));
+    printf("Main test: %d\n", registry[0]->lastRead);
+    
     dequeue(1, t4);  // last read is 0
-    dequeue(1, t4); // last read is 1
-    dequeue(1, t4);  // last read is 2
-    dequeue(1, t4);  // queue empty, last read is 2
+
+    Topic* t5;
+    t5 = malloc(sizeof(Topic));
+    printf("From main: last read %d\n", registry[0]->lastRead);
+    getEntry(registry[0]->lastRead, 1, t5);  // last entry should be 0
+    printf("Testing lastEntry %s\n", t5->photoCaption);
+    dequeue(1, t4);
+    getEntry(registry[0]->lastRead, 1, t5); // last entry should be 0
+    printf("Testing lastEntry %s\n", t5->photoCaption);
+    registry[0]->lastRead = -2;
+    printf("FML: %d\n", registry[0]->lastRead);
+    getEntry(registry[0]->lastRead, 1, t5);
+    printf("After modified last readEntry: Testing lastEntry %s\n", t5->photoCaption);
+    // dequeue(1, t4); // last read is 1
+    // dequeue(1, t4);  // last read is 2
+    // dequeue(1, t4);  // queue empty, last read is 2
+}
+
+void testCleanup()
+{
+    Queue *q;
+    q = malloc(sizeof(Queue));
+    initQueue(q, "Test Queue", 1);
+    registry[0] = q;
+
+    Topic *t1;
+    t1 = malloc(sizeof(Topic));
+    initTopic(t1, 1);
+    strcpy(t1->photoCaption, "T1 caption");
+    strcpy(t1->photoURl, "T1 URL");
+
+    Topic *t2;
+    t2 = malloc(sizeof(Topic));
+    initTopic(t2, 2);
+    strcpy(t2->photoCaption, "T2 caption");
+    strcpy(t2->photoURl, "T2 URL");
+
+    Topic *t3;
+    t3 = malloc(sizeof(Topic));
+    initTopic(t3, 2);
+    strcpy(t3->photoCaption, "T3 caption");
+    strcpy(t3->photoURl, "T3 URL");
+
+    Topic *t5;
+    t5 = malloc(sizeof(Topic));
+
+    Queue* q2;
+    q2 = malloc(sizeof(Queue));
+    initQueue(q2, "T2 Queue", 2);
+    registry[1] = q2;
+
+    enqueue(1, t1);
+    enqueue(1, t2);
+    enqueue(2, t3);
+    printf("Test: %s\n", registry[1]->buffer[0].photoCaption);
+    // dequeue(1, t5);
+    cleanUp();
 }
 
 int main(int argc, char* argv[])
 {
+    // initRegistry();
     // testQueue();
-    testEntry();   
+    // testEntry(); 
+    testCleanup();  
 
     return 0;
 }
