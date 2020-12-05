@@ -17,6 +17,7 @@
 #define MAXURL 256
 #define MAXCAPTION 256
 #define MAXTOPIC 4  // max number of items in q
+#define NUMPROXY 10  // per piazza
 
 pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
@@ -51,17 +52,22 @@ typedef struct
 typedef struct
 {
     Topic* buffer;
-    int id;
-    int totalEntries;
+    int topicID;  // ie type of q like m"breakfast"
+    int length;
 }pubStruct;
 
 typedef struct
 {
-    int lastEntry;
-    Topic* buffer;
+    Topic buffer;
+    int topicID;
+    Topic t;
 }subStruct;
 
-Queue* registry[MAXQUEUES];  // stores all out q's
+Queue* registry[MAXQUEUES];  // stores all our q's
+pubStruct globalPubs[NUMPROXY / 2];
+subStruct globalSubs[NUMPROXY / 2];
+pthread_t pubThread[NUMPROXY / 2];
+pthread_t subThread[NUMPROXY / 2];
 
 
 void initTopic(Topic* t, int id)
@@ -165,6 +171,7 @@ int dequeue(int topicID, Topic* t)
         registry[regIndex]->tail++;
         registry[regIndex]->tail = registry[regIndex]->tail % MAXTICKETS;
         registry[regIndex]->length--;
+        registry[regIndex]->totalItems++;
         printf("From dequeue: Successfully popped <%d> from queue <%d>\n", 
         t->entryNum, registry[regIndex]->topicID);
         registry[regIndex]->lastRead = t->entryNum;
@@ -251,7 +258,7 @@ int getEntry(int lastEntry, int topicType, Topic* t)
     return 0;
 }
 
-void cleanUp()
+void* cleanUp()
 {
     for(int i = 0; i < MAXQUEUES; i++)
     {
@@ -278,6 +285,62 @@ void cleanUp()
             }
         }
         free(t1);      
+    }
+}
+
+void* publisher(void* args)
+{
+    int queueType = ((pubStruct*) args)->topicID;
+    // printf("TopicID: %d\n", queueType);
+    printf("Type publisher: Thread %ld. Waiting\n", pthread_self());
+    pthread_mutex_lock(&globalMutex);
+    pthread_cond_wait(&globalCond, &globalMutex);
+    pthread_mutex_unlock(&globalMutex);
+    int queueIndex; // store the queue type index 
+    int numItems;  // So we can only itterate through tickets since each q has diff length
+    queueIndex = findQueue(queueType);
+    // numItems = globalPubs[queueIndex].length;
+    numItems = ((pubStruct*) args)->length;
+    int status = 0;
+    for(int i = 0; i < numItems; i++)
+    {
+        Topic temp = ((pubStruct*) args)->buffer[i];
+        printf("Publisher thread %ld enqueuing\n", pthread_self());
+        status = enqueue(queueType, &temp);
+        if(status == 0)
+        {
+            printf("From publisher: <%ld> Current queue is full. Waiting\n", pthread_self());
+            while(status == 0)  // try until queue has a free spot
+            {
+                sched_yield();
+                status = enqueue(queueType, &temp);
+                break; // TODO remove me
+            }
+        }
+    }
+}
+
+void* subscriber(void* args)
+{
+    int queueType = ((subStruct*) args)->topicID;
+    printf("Type subscriber: Thread %ld. Waiting\n", pthread_self());
+    pthread_mutex_lock(&globalMutex);
+    pthread_cond_wait(&globalCond, &globalMutex);
+    pthread_mutex_unlock(&globalMutex);
+    Topic temp = ((subStruct*) args)->t;
+    int dq = 1;
+    while(dq)
+    {
+        dq = dequeue(queueType, &temp);
+        if(dq == 1)
+        {
+            printf("Subscriver: queue type <%d>, popped entry num %d. Thread %ld\n",
+                   queueType, temp.entryNum, pthread_self());
+        }else
+        {
+            printf("Subscriber: Queue %d is empty. Thread %ld\n", queueType, pthread_self());
+        }
+        
     }
 }
 
@@ -438,12 +501,77 @@ void testCleanup()
     cleanUp();
 }
 
+void testPubSub()
+{
+    Queue *q;
+    q = malloc(sizeof(Queue));
+    initQueue(q, "Test Queue", 1);
+    registry[0] = q;
+
+    Topic *t1;
+    t1 = malloc(sizeof(Topic));
+    initTopic(t1, 1);
+    strcpy(t1->photoCaption, "T1 caption");
+    strcpy(t1->photoURl, "T1 URL");
+
+    Topic *t2;
+    t2 = malloc(sizeof(Topic));
+    initTopic(t2, 2);
+    strcpy(t2->photoCaption, "T2 caption");
+    strcpy(t2->photoURl, "T2 URL");
+
+    Topic *t3;
+    t3 = malloc(sizeof(Topic));
+    initTopic(t3, 2);
+    strcpy(t3->photoCaption, "T3 caption");
+    strcpy(t2->photoURl, "T3 URL");
+
+    Topic *t4;
+    t4 = malloc(sizeof(Topic));
+    initTopic(t4, 2);
+    strcpy(t4->photoCaption, "T4 caption");
+    strcpy(t4->photoURl, "T4 URL");
+
+    Topic *t5;
+    t5 = malloc(sizeof(Topic));
+
+    // Topic test[3];
+    // test[0] = *t1;
+    // test[1] = *t2;
+    // test[2] = *t3;
+    // test[2] = *t4;
+    enqueue(1, t1);
+    enqueue(1, t2);
+    enqueue(1, t3);
+    enqueue(1, t4);
+
+    globalPubs[0].topicID = 1;
+    globalPubs[0].buffer = registry[0]->buffer;
+    globalPubs[0].length = 4;
+    globalSubs[0].topicID = 1;
+    globalSubs->t = *t5;
+
+    printf("Testing: %s\n", globalPubs[0].buffer[0].photoCaption);
+    printf("Testing: %s\n", globalPubs[0].buffer[1].photoCaption);
+
+    pthread_create(&pubThread[0], NULL, publisher, &globalPubs[0]);
+    pthread_create(&subThread[0], NULL, subscriber, &globalSubs[0]);
+    sleep(1);
+    pthread_cond_broadcast(&globalCond);
+    pthread_join(pubThread[0], NULL);
+    pthread_join(subThread[0], NULL);
+    
+    // pthread_t clean;
+    // pubStruct cleaner;
+    // pthread_create(&clean, NULL, cleanUp, NULL);
+}
+
 int main(int argc, char* argv[])
 {
     // initRegistry();
     // testQueue();
     // testEntry(); 
-    testCleanup();  
-
+    // testCleanup();
+    testPubSub();  
     return 0;
 }
