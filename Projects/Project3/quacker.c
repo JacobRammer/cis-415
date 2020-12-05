@@ -19,10 +19,12 @@
 #define MAXTOPIC 4  // max number of items in q
 #define NUMPROXY 10  // per piazza
 
+int numTopics = 0;
+
 pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
 
-int delta = 1;
+int delta = 10;
 
 typedef struct
 {
@@ -85,7 +87,9 @@ void initRegistry()
 }
 
 void initQueue(Queue* q, char* qName, int topicType)
-{   
+{
+    pthread_mutex_lock(&globalMutex);  // numTopics is a critical section
+    numTopics++;
     strcpy(q->name, qName);
     q->buffer = malloc(sizeof(Topic) * MAXTOPIC);
     q->head = 0;
@@ -96,6 +100,7 @@ void initQueue(Queue* q, char* qName, int topicType)
     q->lastRead = -1;
     q->max = 3;  // TODO fixme
     pthread_mutex_init(&q->mutex, NULL);
+    pthread_mutex_unlock(&globalMutex);
 }
 
 int isFull(Queue* q)
@@ -198,8 +203,9 @@ int getEntry(int lastEntry, int topicType, Topic* t)
     and is the entryNum for that topic. 
     */
     int location = findQueue(topicType);
-    int max = registry[location]->max;
+    int max = registry[location]->length;
     int itter = registry[location]->max;
+    // printf("Head: %d\n", registry[location]->le);
     printf("Location %d\n", location);
     pthread_mutex_lock(&registry[location]->mutex);
 
@@ -208,8 +214,9 @@ int getEntry(int lastEntry, int topicType, Topic* t)
         return 0;
 
     // Case 2
-    // printf("Max: %d\n\n", itter);    
-    for(int i = 0; i < itter; i++)
+    // printf("Max: %d\n\n", itter);   
+    int tail = registry[location]->tail; 
+    for(int i = tail; i < itter; i++)
     {
         // printf("From entry: last read %d\n", registry[location]->lastRead);
         // printf("From entry: looking for tickerNum (lastread + 1): %d\n", lastEntry + 1);
@@ -229,7 +236,7 @@ int getEntry(int lastEntry, int topicType, Topic* t)
 
     // Case 3a
     int ltFlag = 0;
-    for (int i = 0; i < itter; i++)
+    for (int i = tail; i < itter; i++)
     {
         int test = registry[location]->buffer[i].entryNum;
         int test2 = lastEntry + 1;
@@ -239,7 +246,7 @@ int getEntry(int lastEntry, int topicType, Topic* t)
             if(ltFlag == max)
             {
                 printf("Case 3a\n");
-                memcpy(t, &registry[location]->buffer[i], sizeof(Topic));
+                // memcpy(t, &registry[location]->buffer[i], sizeof(Topic));
                 pthread_mutex_unlock(&registry[location]->mutex);
                 return 0;
             }
@@ -252,6 +259,7 @@ int getEntry(int lastEntry, int topicType, Topic* t)
     {
         printf("Case 3b\n");
         memcpy(t, &registry[location]->buffer[location], sizeof(Topic));
+        return 1;
     }
 
     pthread_mutex_unlock(&registry[location]->mutex);
@@ -260,7 +268,9 @@ int getEntry(int lastEntry, int topicType, Topic* t)
 
 void* cleanUp()
 {
-    for(int i = 0; i < MAXQUEUES; i++)
+    printf("Cleanup function started\n");
+    // sleep(2);  // TODO remove
+    for (int i = 0; i < numTopics; i++)
     {
         Topic *t1;
         t1 = malloc(sizeof(Topic));
@@ -270,22 +280,27 @@ void* cleanUp()
         if(found != -1)
         { 
             int head = registry[i]->head;
-            int tail = registry[i]->tail;
-            for(int j = tail; j != head; j++)  // TODO fix this
+            int tail = registry[i]->length;
+            for(int j = head; j != tail; j++)  // TODO fix this. think this is good
             {
                 char* name = registry[found]->buffer[j].photoCaption;
-                sleep(5);
+                // sleep(5);
                 gettimeofday(&registry[found]->buffer[j].cleanTime, NULL);
                 long test = registry[found]->buffer[j].cleanTime.tv_sec - registry[found]->buffer[j].startTime.tv_sec;
                 printf("Tail: %d, head: %d\n", tail, head);
                 printf("Cleanup: %s\n", registry[found]->buffer[j].photoCaption);
                 printf("Time test: %ld\n", test);
                 if(test > delta)
+                {
+                    printf("Cleanup: old entry found. Removing ticket: %d %s\n",
+                           registry[found]->buffer[j].entryNum, registry[found]->buffer[j].photoCaption);
                     dequeue(registry[found]->topicID, t1);
+                }
             }
         }
         free(t1);      
     }
+    printf("Cleanup function finished\n");
 }
 
 void* publisher(void* args)
@@ -331,14 +346,18 @@ void* subscriber(void* args)
     int dq = 1;
     while(dq)
     {
+        // perror("HI");
         dq = dequeue(queueType, &temp);
         if(dq == 1)
         {
-            printf("Subscriver: queue type <%d>, popped entry num %d. Thread %ld\n",
+            printf("Subscriber: queue type <%d>, popped entry num %d. Thread %ld\n",
                    queueType, temp.entryNum, pthread_self());
         }else
         {
             printf("Subscriber: Queue %d is empty. Thread %ld\n", queueType, pthread_self());
+            sleep(1);
+            // sched_yield();
+            dq = dequeue(queueType, &temp);
         }
         
     }
@@ -508,6 +527,11 @@ void testPubSub()
     initQueue(q, "Test Queue", 1);
     registry[0] = q;
 
+    Queue *q2;
+    q2 = malloc(sizeof(Queue));
+    initQueue(q2, "Test Queue", 2);
+    registry[1] = q2;
+
     Topic *t1;
     t1 = malloc(sizeof(Topic));
     initTopic(t1, 1);
@@ -535,35 +559,63 @@ void testPubSub()
     Topic *t5;
     t5 = malloc(sizeof(Topic));
 
+    Topic *t6;
+    t6 = malloc(sizeof(Topic));
+
     // Topic test[3];
     // test[0] = *t1;
     // test[1] = *t2;
     // test[2] = *t3;
     // test[2] = *t4;
-    enqueue(1, t1);
-    enqueue(1, t2);
-    enqueue(1, t3);
-    enqueue(1, t4);
+    // enqueue(1, t1);
+    // enqueue(1, t2);
+    // enqueue(1, t3);
+    // enqueue(1, t4);
+    // dequeue(1, t5);
+
+    Topic pub[3];
+    pub[0] = *t1;
+    pub[1] = *t2;
+    pub[2] = *t3;
+    globalPubs[0].length = 3;
 
     globalPubs[0].topicID = 1;
-    globalPubs[0].buffer = registry[0]->buffer;
-    globalPubs[0].length = 4;
-    globalSubs[0].topicID = 1;
+    globalPubs[0].buffer = pub;
+    // globalPubs[0].length = 4;
+    // globalSubs[0].topicID = 1;
     globalSubs->t = *t5;
+    globalSubs[0].topicID = 1;
+    globalSubs[0].t = *t6;
+
+    pthread_t clean;
+
 
     printf("Testing: %s\n", globalPubs[0].buffer[0].photoCaption);
     printf("Testing: %s\n", globalPubs[0].buffer[1].photoCaption);
 
     pthread_create(&pubThread[0], NULL, publisher, &globalPubs[0]);
+    pthread_create(&clean, NULL, cleanUp, NULL);
     pthread_create(&subThread[0], NULL, subscriber, &globalSubs[0]);
     sleep(1);
     pthread_cond_broadcast(&globalCond);
+    printf("Registry test: %s, %s, %s\n", registry[0]->buffer[0].photoCaption,
+           registry[0]->buffer[1].photoCaption, registry[0]->buffer[2].photoCaption);
     pthread_join(pubThread[0], NULL);
+    pthread_join(clean, NULL);
     pthread_join(subThread[0], NULL);
+    // getEntry(0, 1, t5);
+    // printf("Testing entry again: %s\n", t5->photoCaption);
+    // // registry[0]->buffer[1].entryNum = 25;
+    // dequeue(1, t5);
+    // getEntry(2, 1, t5);
+    // printf("Testing entry again: %s\n", t5->photoCaption);
+    // sleep(2);
+    // cleanUp();
     
     // pthread_t clean;
     // pubStruct cleaner;
     // pthread_create(&clean, NULL, cleanUp, NULL);
+    // sleep(2);
 }
 
 int main(int argc, char* argv[])
