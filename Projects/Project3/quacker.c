@@ -271,7 +271,7 @@ void* cleanUp()
         { 
             int head = registry[i]->head;
             int tail = registry[i]->tail;
-            for(int j = tail; j != head; j++)
+            for(int j = tail; j != head; j++)  // TODO fix this
             {
                 char* name = registry[found]->buffer[j].photoCaption;
                 sleep(5);
