@@ -65,7 +65,7 @@ typedef struct
     Topic t;
 }subStruct;
 
-Queue* registry[MAXQUEUES];  // stores all our q's
+Queue* registry;  // stores all our q's
 pubStruct globalPubs[NUMPROXY / 2];
 subStruct globalSubs[NUMPROXY / 2];
 pthread_t pubThread[NUMPROXY / 2];
@@ -363,6 +363,31 @@ void* subscriber(void* args)
     }
 }
 
+int numQueues(FILE* file)
+{
+    /*
+    Gets the number of queues needed to be created from the input file. 
+    Number of queues can be found by going line by line and counting
+    "create topic"
+    */
+
+    int returnVal = 0;
+    int bufferSize = 256;
+    char* lineBuffer;
+    char* savePtr;
+    lineBuffer = (char*)malloc(bufferSize * sizeof(char));
+    while(fgets(lineBuffer, bufferSize, file) != NULL)
+    {
+        char* command = strtok_r(lineBuffer, " ", &savePtr);
+        if(strcmp(command, "create") == 0)
+        {
+            returnVal++;
+            numTopics++;
+        }
+    }
+    return returnVal;
+}
+
 void testQueue()
 {
     printf("*** Testing queue data structure ***\n");
@@ -573,14 +598,14 @@ void testPubSub()
     // enqueue(1, t4);
     // dequeue(1, t5);
 
-    Topic pub[3];
-    pub[0] = *t1;
-    pub[1] = *t2;
-    pub[2] = *t3;
+    Topic pub[1][3];
+    pub[0][0] = *t1;
+    pub[0][1] = *t2;
+    pub[0][2] = *t3;
     globalPubs[0].length = 3;
 
     globalPubs[0].topicID = 1;
-    globalPubs[0].buffer = pub;
+    globalPubs[0].buffer = pub[0];
     // globalPubs[0].length = 4;
     // globalSubs[0].topicID = 1;
     globalSubs->t = *t5;
@@ -624,6 +649,21 @@ int main(int argc, char* argv[])
     // testQueue();
     // testEntry(); 
     // testCleanup();
-    testPubSub();  
+    // testPubSub();  
+
+    FILE* fName;
+    int numCommands;
+
+    fName = fopen(argv[1], "r");
+    if(fName == NULL)
+    {
+        printf("No valid file: %s\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
+
+    numCommands = numQueues(fName);
+    printf("Num of queues needed: %d\n", numCommands);
+    registry = (Queue*)malloc(sizeof(Queue) * numTopics);
+
     return 0;
 }
