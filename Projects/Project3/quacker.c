@@ -21,6 +21,9 @@
 
 int numTopics = 0;
 int queuesCreated = 0;
+int initiatedPubs;
+int initiatedPubsBuffer = 0;
+int numTickets = 0;
 
 pthread_mutex_t globalMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t globalCond = PTHREAD_COND_INITIALIZER;
@@ -74,15 +77,19 @@ pthread_t pubThread[NUMPROXY];
 pthread_t subThread[NUMPROXY];
 
 
-Topic initTopic(Topic t, int id)
+void initTopic(Topic* t, int type, char* caption, char* url)
 {
+     // TODO mutex
     // t = malloc(sizeof(Topic));
-    t.entryNum = 0;
-    t.pubID =  id;
+    strcpy(t->photoCaption, caption);
+    strcpy(t->photoURl, url);
+    t->entryNum = numTickets;
     // clock_gettime(CLOCK_REALTIME, &t->timeStamp);
-    gettimeofday(&t.startTime, NULL);
+    gettimeofday(&t->startTime, NULL);
+    // printf("Testing init: %s", t->photoCaption);
+    numTickets++;
 
-    return t;
+    // return t;
 }
 
 void initRegistry()
@@ -572,6 +579,23 @@ void removeNewline(char *input)
     // printf("Return string: %s\n", input);
 }
 
+char *removeQuote(char *input, int length)
+{
+    char* newStr[length];
+    printf("Length: %d\n", length);
+    memset(newStr, '\0', sizeof(char) * length);
+    // printf("Input is %s\n", input);
+    for (int i = 0; i < length; i++)
+    {
+        if (input[i] != '"')
+        {
+            // strncat(newStr, &input[i], 1);
+        }
+    }
+
+    // return *newStr;
+}
+
 void publisherEnqueue(FILE* file)
 {
     int bufferSize = 256;
@@ -604,30 +628,59 @@ void publisherEnqueue(FILE* file)
     }
 }
 
-int countTopic(FILE* file, int topic)
+int countTopic(int index, char** pubNames, int itter, int mode)
 {
+    // TODO add mutex
+    // initiatedPubs = 0;
+    initiatedPubsBuffer = 0;
     int numTopics = 0;
-    printf("Topic: %d\n", topic);
     char *lineBuffer;
     char *savePtr;
     int bufferSize = 256;
     lineBuffer = (char *)malloc(sizeof(char) * bufferSize);
-    while(fgets(lineBuffer, bufferSize, file) != NULL)
+    printf("Itter is: %d\n", itter);
+    for(int i = 0; i < itter; i++)
     {
-        if (strcmp(lineBuffer, "start\n") == 0 || strcmp(lineBuffer, "start") == 0)
-            break;
-        char* temp = strtok_r(lineBuffer, " ", &savePtr);
-        if(strcmp(temp, "put") == 0)
+        // printf("Publisher file: %s\n", pubNames[i]);
+        FILE* file = fopen(pubNames[i], "r");
+        while (fgets(lineBuffer, bufferSize, file) != NULL)
         {
-            char* t = strtok_r(NULL, " ", &savePtr);
-            int pp = atoi(t);
-            printf("pp: %d\n", pp);
-            if(pp == topic)
-                topic++;
-            // printf("T: %d\n", numTopics);
-            
+            if (strcmp(lineBuffer, "start\n") == 0 || strcmp(lineBuffer, "start") == 0)
+                break;
+            char *temp = strtok_r(lineBuffer, " ", &savePtr);
+            if (strcmp(temp, "put") == 0)
+            {
+                char* tempTopic = strtok_r(NULL, " ", &savePtr);
+                char* tempUrl = strtok_r(NULL, " ", &savePtr);
+                char* tempCaption = savePtr;
+                int topic = atoi(tempTopic);
+                removeNewline(tempCaption);
+                // char* url = removeQuote(tempUrl, strlen(tempUrl));
+                // char* caption = removeQuote(caption, strlen(tempCaption));
+                if(registry[index].topicID == topic)
+                {
+                    // printf("T: %d, %s, %s\n", topic, tempUrl, tempCaption);
+                    numTopics++;
+                    if (mode == 1)
+                    {
+                        Topic *t;
+                        t = malloc(sizeof(Topic));
+                        initTopic(t, topic, tempCaption, tempUrl);
+                        printf("T: %s, %s, %d\n", t->photoCaption, t->photoURl, t->entryNum);
+                        printf("Initiated Buffer: %d\n", initiatedPubsBuffer);
+                        globalPubs[index].buffer[initiatedPubsBuffer] = *t;
+                        // printf("Testing init: %s, %d\n", globalPubs[itter].buffer->photoCaption, globalPubs[itter].buffer->entryNum);
+                        // globalPubs[itter].buffer[initiatedPubs] = *t;
+                        initiatedPubsBuffer++;
+                        // printf("Init buff: %d\n", initiatedPubsBuffer);
+                    }
+                }
+               
+            }
         }
     }
+    initiatedPubs++;
+    printf("initPubs: %d\n", initiatedPubs);
     return numTopics;
 }
 
@@ -652,17 +705,20 @@ int main(int argc, char* argv[])
     }
 
     numCommands = numQueues(fName, 0);
+    printf("Num commands: %d\n", numCommands);
     registry = malloc(sizeof(Queue) * numCommands);
     fName = fopen(argv[1], "r");
     numQueues(fName, 1);
 
     for(int i = 0; i < numCommands; i++)
+    {
         printf("Registry[%d] is %d\n", i, registry[i].topicID);
+        // pubStruct[i] = malloc(sizeof(pubStruct) * 1);
+    }
+        
 
-    Topic t1;
-    initTopic(t1, 1);
-    strcpy(t1.photoCaption, "T1 caption");
-    strcpy(t1.photoURl, "T1 URL");
+    Topic* t1;
+    // initTopic(t1, 1, "T1 caption", "T1 URL");
 
     fName = fopen(argv[1], "r");
     numPubs = numPublishers(fName);
@@ -672,8 +728,8 @@ int main(int argc, char* argv[])
     char* subscriberArray[numPubs];
     for(int i = 0; i < numPubs; i++)
     {
-        publisherArray[i] = (char *)malloc(sizeof(char) & 256);
-        subscriberArray[i] = (char *)malloc(sizeof(char) & 256);
+        publisherArray[i] = malloc(sizeof(char) * 256);
+        subscriberArray[i] = malloc(sizeof(char) * 256);
     }
 
     fName = fopen(argv[1], "r");
@@ -685,13 +741,22 @@ int main(int argc, char* argv[])
     }
 
     int temp = 0;
-    for(int i = 0; i < numPubs; i++)
+    for(int i = 0; i < numCommands; i++)
     {
-        for(int j = 0; j < numCommands; j++)
-        {
-            fName = fopen(publisherArray[i], "r");
-            temp += countTopic(fName, registry[j].topicID);
-        }        
+        int nt = countTopic(i, publisherArray, numPubs, 0);
+        globalPubs[i].buffer = malloc(sizeof(Topic) * nt);
+        printf("\n\nNum Topics: %d\n", nt);
+    }
+
+    for (int i = 0; i < numCommands; i++)
+    {
+        int nt = countTopic(i, publisherArray, numPubs, 1);
+        printf("\n\nNum Topics: %d\n", nt);
+    }
+
+    for(int i = 0; i < numCommands; i++)
+    {
+        printf("After init test: %s\n", globalPubs[1].buffer[i].photoCaption);
     }
     printf("Temp test: %d\n", temp);
 
