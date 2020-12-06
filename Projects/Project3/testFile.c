@@ -217,7 +217,7 @@ void testPubSub()
     globalPubs[0].length = 3;
 
     globalPubs[0].topicID = 1;
-    globalPubs[0].buffer = pub[0];
+    globalPubs[0].buffer = pub;
     // globalPubs[0].length = 4;
     // globalSubs[0].topicID = 1;
     globalSubs->t = *t5;

@@ -57,6 +57,7 @@ typedef struct
     Topic* buffer;
     int topicID;  // ie type of q like m"breakfast"
     int length;
+    int sleep;
 }pubStruct;
 
 typedef struct
@@ -67,10 +68,10 @@ typedef struct
 }subStruct;
 
 Queue* registry;  // stores all our q's
-pubStruct globalPubs[NUMPROXY / 2];
-subStruct globalSubs[NUMPROXY / 2];
-pthread_t pubThread[NUMPROXY / 2];
-pthread_t subThread[NUMPROXY / 2];
+pubStruct globalPubs[NUMPROXY];
+subStruct globalSubs[NUMPROXY];
+pthread_t pubThread[NUMPROXY];
+pthread_t subThread[NUMPROXY];
 
 
 Topic initTopic(Topic t, int id)
@@ -94,7 +95,7 @@ void initQueue(char* qName, int topicType, int maxEntry)
 {
     pthread_mutex_lock(&globalMutex);  // numTopics is a critical section
     strcpy(registry[queuesCreated].name, qName);
-    registry[queuesCreated].buffer = malloc(sizeof(Topic) * MAXTOPIC);
+    registry[queuesCreated].buffer = malloc(sizeof(Topic) * maxEntry);
     registry[queuesCreated].head = 0;
     registry[queuesCreated].tail = 0;
     registry[queuesCreated].length = 0;
@@ -273,6 +274,7 @@ int getEntry(int lastEntry, int topicType, Topic* t)
 
 void* cleanUp()
 {
+    sleep(delta);
     printf("Cleanup function started\n");
     // sleep(2);  // TODO remove
     for (int i = 0; i < numTopics; i++)
@@ -413,6 +415,8 @@ int numQueues(FILE* file, int mode)
     lineBuffer = (char*)malloc(bufferSize * sizeof(char));
     while(fgets(lineBuffer, bufferSize, file) != NULL)
     {
+        if (strcmp(lineBuffer, "start\n") == 0 || strcmp(lineBuffer, "start") == 0)
+            break;
         char* command = strtok_r(lineBuffer, " ", &savePtr);
         if(strcmp(command, "create") == 0)
         {
@@ -440,9 +444,10 @@ int numPublishers(FILE* file)
     lineBuffer = (char*)malloc(sizeof(char) * bufferSize);
     while(fgets(lineBuffer, bufferSize, file) != NULL)
     {
+        if (strcmp(lineBuffer, "start\n") == 0 || strcmp(lineBuffer, "start") == 0)
+            break;
         char* temp = strtok_r(lineBuffer, " ", &savePtr);
         temp = strtok_r(NULL, " ", &savePtr);
-        printf("Temp: %s\n", temp);
         if(strcmp(temp, "publisher") == 0)
         {
             publisher++;
@@ -488,6 +493,8 @@ void addPubArray(FILE* file, char** array)
    lineBuffer = (char*)malloc(sizeof(char) * bufferSize);
    while(fgets(lineBuffer, bufferSize, file) != NULL)
    {
+       if (strcmp(lineBuffer, "start\n") == 0 || strcmp(lineBuffer, "start") == 0)
+           break;
        char* temp = strtok_r(lineBuffer, " ", &savePtr);
        temp = strtok_r(NULL, " ", &savePtr);
        if(strcmp(temp, "publisher") == 0) 
@@ -522,6 +529,8 @@ void addSubArray(FILE* file, char** array)
     lineBuffer = (char *)malloc(sizeof(char) * bufferSize);
     while (fgets(lineBuffer, bufferSize, file) != NULL)
     {
+        if (strcmp(lineBuffer, "start\n") == 0 || strcmp(lineBuffer, "start") == 0)
+            break;
         char *temp = strtok_r(lineBuffer, " ", &savePtr);
         temp = strtok_r(NULL, " ", &savePtr);
         if (strcmp(temp, "subscriber") == 0)
@@ -547,6 +556,81 @@ void addSubArray(FILE* file, char** array)
     free(lineBuffer);
 }
 
+void removeNewline(char *input)
+{
+    int length = strlen(input);
+    // printf("Input is %s\n", input);
+    for (int i = 0; i < length; i++)
+    {
+        char temp = input[i];
+        if (strcmp(&input[i], "\n") == 0)
+        {
+            input[i] = '\0';
+        }
+    }
+
+    // printf("Return string: %s\n", input);
+}
+
+void publisherEnqueue(FILE* file)
+{
+    int bufferSize = 256;
+    char *lineBuffer;
+    char *savePtr;
+    int index = 0;
+    char* fileQueue;
+    char* url;
+    int topic;
+    lineBuffer = (char *)malloc(sizeof(char) * bufferSize);
+    while(fgets(lineBuffer, bufferSize, file) != NULL)
+    {
+        if (strcmp(lineBuffer, "start\n") == 0 || strcmp(lineBuffer, "start") == 0)
+            break;
+        char* temp = strtok_r(lineBuffer, " ", &savePtr);
+        if(strcmp(temp, "put") == 0)
+        {
+            fileQueue = strtok_r(NULL, " ", &savePtr);
+            url = strtok_r(NULL, " ", &savePtr);
+            removeNewline(savePtr);
+            topic = atoi(fileQueue);
+            printf("FileQueue: %d, %s, %s\n", topic, url, savePtr);
+        }
+        else if(strcmp(temp, "sleep") == 0)
+        {
+            char* s = strtok_r(NULL, " ", &savePtr);
+            removeNewline(s);
+            printf("Sleep test: %s\n", s);
+        }
+    }
+}
+
+int countTopic(FILE* file, int topic)
+{
+    int numTopics = 0;
+    printf("Topic: %d\n", topic);
+    char *lineBuffer;
+    char *savePtr;
+    int bufferSize = 256;
+    lineBuffer = (char *)malloc(sizeof(char) * bufferSize);
+    while(fgets(lineBuffer, bufferSize, file) != NULL)
+    {
+        if (strcmp(lineBuffer, "start\n") == 0 || strcmp(lineBuffer, "start") == 0)
+            break;
+        char* temp = strtok_r(lineBuffer, " ", &savePtr);
+        if(strcmp(temp, "put") == 0)
+        {
+            char* t = strtok_r(NULL, " ", &savePtr);
+            int pp = atoi(t);
+            printf("pp: %d\n", pp);
+            if(pp == topic)
+                topic++;
+            // printf("T: %d\n", numTopics);
+            
+        }
+    }
+    return numTopics;
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -569,29 +653,21 @@ int main(int argc, char* argv[])
 
     numCommands = numQueues(fName, 0);
     registry = malloc(sizeof(Queue) * numCommands);
+    fName = fopen(argv[1], "r");
+    numQueues(fName, 1);
+
+    for(int i = 0; i < numCommands; i++)
+        printf("Registry[%d] is %d\n", i, registry[i].topicID);
 
     Topic t1;
     initTopic(t1, 1);
     strcpy(t1.photoCaption, "T1 caption");
     strcpy(t1.photoURl, "T1 URL");
 
-    Topic t2;
-    initTopic(t2, 2);
-    strcpy(t2.photoCaption, "T2 caption");
-    strcpy(t2.photoURl, "T2 URL");
-
-    fName = fopen(argv[1], "r");
-    numQueues(fName, 1);
-    enqueue(1, &t1);
-    
-    printf("Num of queues needed: %d\n", numCommands);
     fName = fopen(argv[1], "r");
     numPubs = numPublishers(fName);
-    fName = fopen(argv[1], "r");
-    findDelta(fName);
-    printf("Num pubs: %d\n", numPubs);
-    fName = fopen(argv[1], "r");
-    char* temp;
+    printf("Num publishers: %d\n", numPubs);
+
     char *publisherArray[numPubs];
     char* subscriberArray[numPubs];
     for(int i = 0; i < numPubs; i++)
@@ -599,21 +675,79 @@ int main(int argc, char* argv[])
         publisherArray[i] = (char *)malloc(sizeof(char) & 256);
         subscriberArray[i] = (char *)malloc(sizeof(char) & 256);
     }
-    addPubArray(fName, publisherArray);
-    fName = fopen(argv[1], "r");
-    addSubArray(fName, subscriberArray);
 
-    // read input file to create proper q
     fName = fopen(argv[1], "r");
-    // Queue* q;
-    // initQueue(1, "Quacker Queue")
+    addPubArray(fName, publisherArray);
+    printf("Num pubs: %d\n", numPubs);
+    for(int i = 0; i < numPubs; i++)
+    {
+        printf("Testing pubs from main: %s\n", publisherArray[i]);
+    }
+
+    int temp = 0;
+    for(int i = 0; i < numPubs; i++)
+    {
+        for(int j = 0; j < numCommands; j++)
+        {
+            fName = fopen(publisherArray[i], "r");
+            temp += countTopic(fName, registry[j].topicID);
+        }        
+    }
+    printf("Temp test: %d\n", temp);
+
+    // FILE* temp = fopen("publisher1.txt", "r");
+    // publisherEnqueue(temp);
+
+    // // create publisher
+    // for(int i = 0; i < numPubs; i++)
+    // {
+    //     int itter = registry[i].max;
+    //     for(int j = 0; j < itter; j++)
+    //     {
+    //         globalPubs[i].topicID = registry[i].topicID;        
+    //         printf("Topic type test: %d\n", globalPubs[i].topicID);    
+    //     }
+    // }
+
+    // Topic t2;
+    // initTopic(t2, 2);
+    // strcpy(t2.photoCaption, "T2 caption");
+    // strcpy(t2.photoURl, "T2 URL");
+
+    // fName = fopen(argv[1], "r");
+    // numQueues(fName, 1);
+    // enqueue(1, &t1);
+    
+    // printf("Num of queues needed: %d\n", numCommands);
+    // fName = fopen(argv[1], "r");
+    // numPubs = numPublishers(fName);
+    // fName = fopen(argv[1], "r");
+    // findDelta(fName);
+    // printf("Num pubs: %d\n", numPubs);
+    // fName = fopen(argv[1], "r");
+    // char* temp;
+    // char *publisherArray[numPubs];
+    // char* subscriberArray[numPubs];
+    // for(int i = 0; i < numPubs; i++)
+    // {
+    //     publisherArray[i] = (char *)malloc(sizeof(char) & 256);
+    //     subscriberArray[i] = (char *)malloc(sizeof(char) & 256);
+    // }
+    // addPubArray(fName, publisherArray);
+    // fName = fopen(argv[1], "r");
+    // addSubArray(fName, subscriberArray);
+
+    // // read input file to create proper q
+    // fName = fopen(argv[1], "r");
+    // // Queue* q;
+    // // initQueue(1, "Quacker Queue")
 
     
-    // publisherArray[0] = "Test";
-    // publisherArray[1] = "Test1";
-    // publisherArray[2] = "Test2";
-    printf("Final test: %s\n", publisherArray[0]);
-    printf("Final test: %s\n", subscriberArray[0]);
+    // // publisherArray[0] = "Test";
+    // // publisherArray[1] = "Test1";
+    // // publisherArray[2] = "Test2";
+    // printf("Final test: %s\n", publisherArray[0]);
+    // printf("Final test: %s\n", subscriberArray[0]);
 
     return 0;
 }
